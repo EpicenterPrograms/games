@@ -2,11 +2,25 @@
 <html>
 	<head>
 		<base target="_parent">
+		<script src="https://epicenterprograms.github.io/standards/behavior/general.js"></script>
 		<script src="https://epicenterprograms.github.io/standards/behavior/navigation.js"></script>
+		<script src="https://epicenterprograms.github.io/standards/behavior/storage.js"></script>
 		<script>
+			var S = Standards.general;
+			var M = Standards.storage;
+
 			Standards.navigation.contents = [  // [page URL, title]
-				[".", "Home"]
+				[".", "Home"],
+				["chatroom", "Chatroom"]
 			];
+
+			S.onLoad(function () {
+				S.forEach(S.getTag("a"), function (a) {
+					S.listen(a, "click", function () {
+						M.session.store("/games/leaving", false);
+					});
+				});
+			});
 		</script>
 		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/foundation.css">
 	</head>

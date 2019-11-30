@@ -6,8 +6,38 @@
 		</title>
 		<base target="_blank">
 		<script src="https://epicenterprograms.github.io/standards/behavior/general.js"></script>
-		<script src="https://epicenterprograms.github.io/standards/behavior/game.js"></script>
 		<script src="https://epicenterprograms.github.io/standards/behavior/storage.js"></script>
+		<script src="https://epicenterprograms.github.io/standards/behavior/game.js"></script>
+		<script src="behavior.js"></script>
+		<script>
+			S.listen("checkCode", "click", function () {
+				document.body.style.cursor = "wait";
+				let code = encodeURIComponent(S.getId("saveCode").value.trim());
+				M.server.recall("~websites/games/codes/" + code + "/players present").then(function (value) {
+					document.body.style.cursor = "auto";
+					if (S.getType(value) != "Number" || value < 1) {
+						M.session.store("save code", code);
+						S.makeDialog("Save code created.");
+					} else {
+						let plurality;
+						if (value == 1) {
+							plurality = " person is ";
+						} else {
+							plurality = " people are ";
+						}
+						S.makeDialog(value + plurality + "already using this code. Continue?",
+							["Yes", function () {
+								M.session.store("save code", code);
+							}],
+							["No", function () {
+								S.getId("saveCode").value = "";
+								M.session.forget("save code");
+							}]
+						);
+					}
+				});
+			});
+		</script>
 		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/foundation.css">
 		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/game.css">
 	</head>
@@ -20,8 +50,15 @@
 		</h1>
 		<main>
 			<p>
-				This allows you to play games.
+				This allows you to play games. Use the same save code as a friend to play with them online.
 			</p>
+			<h4>
+				Set your save code
+			</h4>
+			<input type="text" id="saveCode" placeholder="Code">
+			<button id="checkCode">
+				Check and set
+			</button>
 		</main>
 	</body>
 </html>
