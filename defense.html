@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+	<head>
+		<title>
+			Games
+		</title>
+		<base target="_blank">
+		<script src="https://epicenterprograms.github.io/standards/behavior/general.js"></script>
+		<script src="https://epicenterprograms.github.io/standards/behavior/storage.js"></script>
+		<script src="https://epicenterprograms.github.io/standards/behavior/game.js"></script>
+		<!--
+		<script src="file:///C:/Users/rtben/Documents/GitHub/standards/behavior/game.js"></script>
+		-->
+		<script src="behavior.js"></script>
+		<script>
+			G.container = "gameScreen";
+			var strategyMax = 5;  // the highest number possible in the mastermind's strategy
+			var mastermind = {
+				strategy: [0, 0, 0],
+				reconsider: function () {  //// document.readyState == "complete"
+					let s = mastermind.strategy;
+					S.forEach(2, function () {
+						s[Math.floor(Math.random() * s.length)] += [-1, 0, 1][Math.floor(Math.random() * 3)];
+					});
+					S.forEach(s, function (number) {
+						if (number < 0) {
+							number = 0;
+						} else if (number > strategyMax) {
+							number = strategyMax;
+						}
+					})
+				},
+				adapt: function (newStrategy) {
+
+				},
+				minions: [],
+				spawnMinion: function () {
+
+				}
+			};
+
+			S.onLoad(function () {
+
+			});
+		</script>
+		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/foundation.css">
+		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/game.css">
+		<style>
+			#gameScreen {
+				background: black;
+				width: 40rem;
+				height: 40rem;
+			}
+		</style>
+	</head>
+	<body>
+		<nav class="hidden-left-nav">
+			<iframe src="navigation.html"></iframe>
+		</nav>
+		<h1 class="main-title">
+			Space defense
+		</h1>
+		<main>
+			<section>
+				Shoot the invaders.
+			</section>
+			<div id="gameScreen"></div>
+		</main>
+	</body>
+</html>

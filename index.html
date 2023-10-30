@@ -12,11 +12,14 @@
 		<script>
 			S.listen("checkCode", "click", function () {
 				document.body.style.cursor = "wait";
+				S.getId("checkCode").disabled = true;
 				let code = encodeURIComponent(S.getId("saveCode").value.trim());
 				M.server.recall("~websites/games/codes/" + code + "/players present").then(function (value) {
 					document.body.style.cursor = "auto";
 					if (S.getType(value) != "Number" || value < 1) {
 						M.session.store("save code", code);
+						//// store code on server
+						S.getId("checkCode").disabled = false;
 						S.makeDialog("Save code created.");
 					} else {
 						let plurality;
@@ -28,12 +31,15 @@
 						S.makeDialog(value + plurality + "already using this code. Continue?",
 							["Yes", function () {
 								M.session.store("save code", code);
+								//// store code on server
 							}],
 							["No", function () {
 								S.getId("saveCode").value = "";
-								M.session.forget("save code");
+								M.session.forget("save code");  // not necessary
 							}]
-						);
+						).then(function () {
+							S.getId("checkCode").disabled = false;
+						});
 					}
 				});
 			});
@@ -49,9 +55,9 @@
 			Home
 		</h1>
 		<main>
-			<p>
+			<section>
 				This allows you to play games. Use the same save code as a friend to play with them online.
-			</p>
+			</section>
 			<h4>
 				Set your save code
 			</h4>
