@@ -24,7 +24,7 @@
 			var currentPiece = null;  // the currently selected game piece
 			var currentPlayer = 0;
 			var players = 1;  // the number of real players
-			var colors = ["red", "green", "blue", "gray"];  // the color of the player pieces clockwise from bottom
+			var colors = ["red", "green", "blue", "purple"];  // the color of the player pieces clockwise from bottom
 			var piecesPerLayer = 3;  // the number of pieces allowed per layer
 
 			function choiceAvailable(option) {
@@ -33,6 +33,7 @@
 				*/
 				return option.dataset["z" + currentLayer + "IsOpen"] === "true" ? true : false;
 			}
+
 			function makeAMove(option) {
 				/**
 				moves one of a player's pieces to a space on the game board
@@ -112,7 +113,7 @@
 				currentPiece = null;  // the currently selected game piece
 				currentPlayer = 0;
 				players = 1;  // the number of real players
-				colors = ["red", "green", "blue", "gray"];  // the color of the player pieces clockwise from bottom
+				colors = ["red", "green", "blue", "purple"];  // the color of the player pieces clockwise from bottom
 				piecesPerLayer = 3;  // the number of pieces allowed per layer
 
 				// creates the game board
@@ -122,8 +123,8 @@
 					S.forEach(size.y, function (_, yIndex) {
 						let square = document.createElement("div");
 						square.className = "playing-space generic-border";
-						square.style.left = "calc(35rem / 2 + " + (xIndex - size.x / 2) + " * var(--game-space-width))";
-						square.style.top = "calc(35rem / 2 + " + (yIndex - size.y / 2) + " * var(--game-space-width))";
+						square.style.left = "calc(var(--game-screen-width) / 2 + " + (xIndex - size.x / 2) + " * var(--game-space-width))";
+						square.style.top = "calc(var(--game-screen-width) / 2 + " + (yIndex - size.y / 2) + " * var(--game-space-width))";
 						/// middle of gameScreen + how many game spaces to move to either side
 						S.forEach(size.z, function (_, zIndex) {
 							square.dataset["z" + zIndex + "IsOpen"] = true;
@@ -149,9 +150,9 @@
 							let pieceSize = "calc(" + (layerIndex + 1) + " * var(--game-space-width) / " + size.z + ")";
 							piece.style.width = pieceSize;
 							piece.style.height = pieceSize;
-							piece.style[["left", "top", "right", "bottom"][playerIndex]] = "calc(35rem / 2 + " + (layerIndex - size.x / 2) + " * var(--game-space-width) + var(--game-space-width) / 2 - " + pieceSize + " / 2)";
+							piece.style[["left", "top", "right", "bottom"][playerIndex]] = "calc(var(--game-screen-width) / 2 + " + (layerIndex - size.x / 2) + " * var(--game-space-width) + var(--game-space-width) / 2 - " + pieceSize + " / 2)";
 							/// middle of gameScreen + how many game spaces to move to either side + half a game space - half a piece width
-							piece.style[["bottom", "left", "top", "right"][playerIndex]] = "1rem";
+							piece.style[["bottom", "left", "top", "right"][playerIndex]] = "calc(var(--game-screen-width) / 35)";
 							standbys[playerIndex][layerIndex].push(piece);
 							S.getId("gameScreen").appendChild(piece);
 							piece.addEventListener("click", function () {
@@ -168,15 +169,16 @@
 		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/game.css">
 		<style>
 			#gameScreen {
+				--game-screen-width: 35rem;
+				--game-space-width: calc(var(--game-screen-width) / 6);
 				position: relative;
-				width: 35rem;
-				height: 35rem;
-				--game-space-width: 6rem;
+				width: var(--game-screen-width);
+				height: var(--game-screen-width);
 			}
 			.playing-space {
 				position: absolute;
 				z-index: 0;
-				border-width: .5em;
+				border-width: calc(var(--game-screen-width) / 80);
 				width: var(--game-space-width);
 				height: var(--game-space-width);
 				cursor: pointer;
@@ -184,7 +186,7 @@
 			.game-piece {
 				position: absolute;
 				z-index: 1;
-				border-width: 1em;
+				border-width: calc(var(--game-screen-width) / 35);
 				border-style: solid;
 				border-radius: 100em;  /* just an abritrary number higher than will be ever used */
 				opacity: .5;
@@ -197,8 +199,7 @@
 					padding: 0%;
 				}
 				#gameScreen {
-					width: 100vw;
-					height: 100vw;
+					--game-screen-width: 100vw;
 				}
 			}
 		</style>
