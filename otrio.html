@@ -143,16 +143,19 @@
 				S.forEach(4, function (_, playerIndex) {
 					S.forEach(size.z, function (_, layerIndex) {
 						standbys[playerIndex].push([]);
-						S.forEach(piecesPerLayer, function (pieceIndex) {
+						S.forEach(piecesPerLayer, function (_, pieceIndex) {
 							let piece = document.createElement("div");
 							piece.className = "game-piece";
 							piece.style.borderColor = colors[playerIndex];
 							let pieceSize = "calc(" + (layerIndex + 1) + " * var(--game-space-width) / " + size.z + ")";
 							piece.style.width = pieceSize;
 							piece.style.height = pieceSize;
-							piece.style[["left", "top", "right", "bottom"][playerIndex]] = "calc(var(--game-screen-width) / 2 + " + (layerIndex - size.x / 2) + " * var(--game-space-width) + var(--game-space-width) / 2 - " + pieceSize + " / 2)";
-							/// middle of gameScreen + how many game spaces to move to either side + half a game space - half a piece width
-							piece.style[["bottom", "left", "top", "right"][playerIndex]] = "calc(var(--game-screen-width) / 35)";
+							let horizontalOffset = "(" + Math.sin(2 * Math.PI * pieceIndex / piecesPerLayer) + " * var(--size-unit))";
+							piece.style[["left", "top", "right", "bottom"][playerIndex]] = "calc(var(--game-screen-width) / 2 + " + (layerIndex - size.x / 2) + " * var(--game-space-width) + var(--game-space-width) / 2 - " + pieceSize + " / 2 + " + horizontalOffset + ")";
+							/// middle of gameScreen + how many game spaces to move to either side + half a game space - half a piece width + circular offset
+							let verticalOffset = "(" + Math.cos(2 * Math.PI * pieceIndex / piecesPerLayer) + " * var(--size-unit))";
+							piece.style[["bottom", "left", "top", "right"][playerIndex]] = "calc(var(--size-unit) + (var(--game-space-width) - " + pieceSize + ") / 2 + " + verticalOffset + ")";
+							/// padding + piece alignment + circular offset
 							standbys[playerIndex][layerIndex].push(piece);
 							S.getId("gameScreen").appendChild(piece);
 							piece.addEventListener("click", function () {
@@ -173,6 +176,7 @@
 			#gameScreen {
 				--game-screen-width: 35rem;
 				--game-space-width: calc(var(--game-screen-width) / 6);
+				--size-unit: calc(var(--game-screen-width) / 35);
 				position: relative;
 				width: var(--game-screen-width);
 				height: var(--game-screen-width);
@@ -188,10 +192,9 @@
 			.game-piece {
 				position: absolute;
 				z-index: 1;
-				border-width: calc(var(--game-screen-width) / 35);
+				border-width: var(--size-unit);
 				border-style: solid;
 				border-radius: 100em;  /* just an abritrary number higher than will be ever used */
-				opacity: .5;
 				cursor: pointer;
 				transition: 1s;
 			}
