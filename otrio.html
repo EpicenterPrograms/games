@@ -22,7 +22,7 @@
 			var standbys = [[], [], [], []];  // the unused game pieces for each player
 			var options = [];  // the potential places to put a game piece (contains the entity references)
 			var currentPiece = null;  // the currently selected game piece
-			var currentPlayer = 0;
+			var currentPlayer = -1;
 			var players = 1;  // the number of real players
 			var colors = ["red", "green", "blue", "purple"];  // the color of the player pieces clockwise from bottom
 			var piecesPerLayer = 3;  // the number of pieces allowed per layer
@@ -34,50 +34,20 @@
 				return option.dataset["z" + currentLayer + "IsOpen"] === "true" ? true : false;
 			}
 
-			function makeAMove(option) {
-				/**
-				moves one of a player's pieces to a space on the game board
-				*/
-				S.forEach(["top", "bottom", "left", "right"], function (side) {
-					currentPiece.style[side] = "auto";  // prevents irregularities from a value on a different side conflicting
+			function showWhoseTurn() {
+				if (currentPlayer < 3) {
+					currentPlayer++;
+				} else {
+					currentPlayer = 0;
+				}
+				S.getId("currentPlayer").style.width = ["100%", "calc(var(--game-space-width) + var(--size-unit) * 2.5)"][currentPlayer % 2];
+				S.getId("currentPlayer").style.height = ["calc(var(--game-space-width) + var(--size-unit) * 2.5)", "100%"][currentPlayer % 2];
+				S.forEach(["bottom", "left", "top", "right"], function (side) {
+					S.getId("currentPlayer").style[side] = "";
 				});
-				currentPiece.style.left = "calc(" + option.style.left + " + var(--game-space-width) / 2 - " + currentPiece.style.width + " / 2)";
-				currentPiece.style.top = "calc(" + option.style.top + " + var(--game-space-width) / 2 - " + currentPiece.style.width + " / 2)";
-				currentPiece.style.pointerEvents = "none";
-				option.dataset["z" + currentLayer + "IsOpen"] = false;
-				currentPiece = null;
-				if (gameHasEnded()) {
-					//// end the game
-				}
+				S.getId("currentPlayer").style[["bottom", "left", "top", "right"][currentPlayer]] = "0em";
+				S.getId("currentPlayer").style[["left", "top", "right", "bottom"][currentPlayer]] = "0em";
 			}
-
-			var Opponent = function (playerNumber, startingPoint) {
-				/**
-				Provides an adaptive opponent with an optional previous level of knowledge
-				*/
-				var opponent = this;
-
-				this.takeATurn = function () {
-					var position = {  // the position where the opponent is planning on placing a piece
-						x: 0,
-						y: 0,
-						z: 0,
-					};
-					var desiredOption;
-					currentPlayer = playerNumber;
-					do {
-						position.x = Math.floor(Math.random() * size.x);
-						position.y = Math.floor(Math.random() * size.y);
-						do {
-							position.z = Math.floor(Math.random() * size.z);
-						} while (standbys[currentPlayer][position.z].length > 0);
-						desiredOption = options[position.x][position.y];
-						currentLayer = position.z;
-					} while (!choiceAvailable(desiredOption));
-					currentPiece = standbys[currentPlayer][currentLayer][0];
-					makeAMove(desiredOption);
-				}
-			};
 
 			function gameHasEnded() {
 				// checks if anyone has won
@@ -100,6 +70,60 @@
 				}
 			}
 
+			function makeAMove(option) {
+				/**
+				moves one of a player's pieces to a space on the game board
+				*/
+				S.forEach(["top", "bottom", "left", "right"], function (side) {
+					currentPiece.style[side] = "auto";  // prevents irregularities from a value on a different side conflicting
+				});
+				currentPiece.style.left = "calc(" + option.style.left + " + var(--game-space-width) / 2 - " + currentPiece.style.width + " / 2)";
+				currentPiece.style.top = "calc(" + option.style.top + " + var(--game-space-width) / 2 - " + currentPiece.style.width + " / 2)";
+				currentPiece.style.pointerEvents = "none";
+				option.dataset["z" + currentLayer + "IsOpen"] = false;
+				currentPiece = null;
+				if (gameHasEnded()) {
+					//// end the game
+				} else {
+					showWhoseTurn();
+				}
+			}
+
+			var Opponent = function (playerNumber, startingPoint) {
+				/**
+				Provides an adaptive opponent with an optional previous level of knowledge
+				*/
+				var opponent = this;
+
+				this.takeATurn = function () {
+					var position = {  // the position where the opponent is planning on placing a piece
+						x: 0,
+						y: 0,
+						z: 0,
+					};
+					var desiredOption;
+					currentPlayer = playerNumber;
+					var failsafe = 500;  // the maximum number of loops allowed (prevents infinite loops)
+					do {
+						position.x = Math.floor(Math.random() * size.x);
+						position.y = Math.floor(Math.random() * size.y);
+						do {
+							position.z = Math.floor(Math.random() * size.z);
+							failsafe--;
+						} while (standbys[currentPlayer][position.z].length > 0 && failsafe);
+						desiredOption = options[position.x][position.y];
+						currentLayer = position.z;
+					} while (!choiceAvailable(desiredOption) && failsafe);
+					if (failsafe) {  // if the failsafe wasn't triggered
+						currentPiece = standbys[currentPlayer][currentLayer][0];
+						makeAMove(desiredOption);
+					} else {  // if there's likely an infinite loop error
+						console.error("An opponent got stuck in an infinite loop");
+						S.makeDialog("The opponent couldn't determine a move to make.");
+					}
+				}
+			};
+
 			S.listen("play", "click", function () {
 				// resets all of the variables
 				size = {  // the size of the game board
@@ -111,7 +135,7 @@
 				standbys = [[], [], [], []];  // the unused game pieces for each player
 				options = [];  // the potential places to put a game piece (contains the entity references)
 				currentPiece = null;  // the currently selected game piece
-				currentPlayer = 0;
+				currentPlayer = -1;
 				players = 1;  // the number of real players
 				colors = ["red", "green", "blue", "purple"];  // the color of the player pieces clockwise from bottom
 				piecesPerLayer = 3;  // the number of pieces allowed per layer
@@ -147,7 +171,7 @@
 							let piece = document.createElement("div");
 							piece.className = "game-piece";
 							piece.style.borderColor = colors[playerIndex];
-							let pieceSize = "calc(" + (layerIndex + 1) + " * var(--game-space-width) / " + size.z + ")";
+							let pieceSize = "calc(" + (layerIndex + 1) + " * var(--game-space-width) * .75 / " + size.z + ")";
 							piece.style.width = pieceSize;
 							piece.style.height = pieceSize;
 							let horizontalOffset = "(" + Math.sin(2 * Math.PI * pieceIndex / piecesPerLayer) + " * var(--size-unit))";
@@ -167,6 +191,12 @@
 					});
 				});
 
+				// creates the box to show whose turn it is
+				let playerHighlight = document.createElement("div");
+				playerHighlight.id = "currentPlayer";
+				S.getId("gameScreen").appendChild(playerHighlight);
+				showWhoseTurn();
+
 				this.textContent = "Restart";
 			});
 		</script>
@@ -176,10 +206,16 @@
 			#gameScreen {
 				--game-screen-width: 35rem;
 				--game-space-width: calc(var(--game-screen-width) / 6);
-				--size-unit: calc(var(--game-screen-width) / 35);
+				--size-unit: calc(var(--game-screen-width) / 45);
 				position: relative;
 				width: var(--game-screen-width);
 				height: var(--game-screen-width);
+			}
+			#currentPlayer {
+				position: absolute;
+				border-width: var(--size-unit);
+				border-style: solid;
+				border-color: yellow;
 			}
 			.playing-space {
 				position: absolute;
