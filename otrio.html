@@ -13,6 +13,23 @@
 		-->
 		<script src="behavior.js"></script>
 		<script>
+			function weightedRandomChoice(items, weights) {
+				if (items.length !== weights.length) {
+					throw new Error("Items and weights must be of the same size");
+				}
+				let cumulativeWeights = [];
+				for (let i = 0; i < weights.length; i++) {
+					cumulativeWeights[i] = weights[i] + (cumulativeWeights[i - 1] || 0);
+				}
+				let randomNumber = cumulativeWeights[cumulativeWeights.length - 1] * Math.random();
+				for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+					if (cumulativeWeights[itemIndex] >= randomNumber) {
+						return items[itemIndex];
+					}
+				}
+			}
+		</script>
+		<script>
 			var size = {  // the size of the game board
 				x: 3,
 				y: 3,
@@ -22,7 +39,7 @@
 			var standbys = [[], [], [], []];  // the unused game pieces for each player
 			var options = [];  // the potential places to put a game piece (contains the entity references)
 			var currentPiece = null;  // the currently selected game piece
-			var currentPlayer = -1;
+			var currentPlayer = 0;
 			var players = 1;  // the number of real players
 			var colors = ["red", "green", "blue", "purple"];  // the color of the player pieces clockwise from bottom
 			var piecesPerLayer = 3;  // the number of pieces allowed per layer
@@ -40,10 +57,10 @@
 				} else {
 					currentPlayer = 0;
 				}
-				S.getId("currentPlayer").style.width = ["100%", "calc(var(--game-space-width) + var(--size-unit) * 2.5)"][currentPlayer % 2];
-				S.getId("currentPlayer").style.height = ["calc(var(--game-space-width) + var(--size-unit) * 2.5)", "100%"][currentPlayer % 2];
+				S.getId("currentPlayer").style.width = ["100%", "calc(var(--game-space-width) + var(--size-unit) * 2.25)"][currentPlayer % 2];
+				S.getId("currentPlayer").style.height = ["calc(var(--game-space-width) + var(--size-unit) * 2.25)","100%"][currentPlayer % 2];
 				S.forEach(["bottom", "left", "top", "right"], function (side) {
-					S.getId("currentPlayer").style[side] = "";
+					S.getId("currentPlayer").style[side] = "auto";
 				});
 				S.getId("currentPlayer").style[["bottom", "left", "top", "right"][currentPlayer]] = "0em";
 				S.getId("currentPlayer").style[["left", "top", "right", "bottom"][currentPlayer]] = "0em";
@@ -79,15 +96,19 @@
 				});
 				currentPiece.style.left = "calc(" + option.style.left + " + var(--game-space-width) / 2 - " + currentPiece.style.width + " / 2)";
 				currentPiece.style.top = "calc(" + option.style.top + " + var(--game-space-width) / 2 - " + currentPiece.style.width + " / 2)";
+				standbys[currentPlayer][currentLayer].splice(standbys[currentPlayer][currentLayer].indexOf(currentPiece), 1);
 				currentPiece.style.pointerEvents = "none";
 				option.dataset["z" + currentLayer + "IsOpen"] = false;
 				currentPiece = null;
 				if (gameHasEnded()) {
+					S.getId("currentPlayer").style.left = "100%";
 					//// end the game
 				} else {
 					showWhoseTurn();
 				}
 			}
+
+
 
 			var Opponent = function (playerNumber, startingPoint) {
 				/**
@@ -110,7 +131,7 @@
 						do {
 							position.z = Math.floor(Math.random() * size.z);
 							failsafe--;
-						} while (standbys[currentPlayer][position.z].length > 0 && failsafe);
+						} while (standbys[currentPlayer][position.z].length == 0 && failsafe);
 						desiredOption = options[position.x][position.y];
 						currentLayer = position.z;
 					} while (!choiceAvailable(desiredOption) && failsafe);
@@ -124,6 +145,8 @@
 				}
 			};
 
+
+
 			S.listen("play", "click", function () {
 				// resets all of the variables
 				size = {  // the size of the game board
@@ -135,7 +158,7 @@
 				standbys = [[], [], [], []];  // the unused game pieces for each player
 				options = [];  // the potential places to put a game piece (contains the entity references)
 				currentPiece = null;  // the currently selected game piece
-				currentPlayer = -1;
+				currentPlayer = 0;
 				players = 1;  // the number of real players
 				colors = ["red", "green", "blue", "purple"];  // the color of the player pieces clockwise from bottom
 				piecesPerLayer = 3;  // the number of pieces allowed per layer
@@ -195,9 +218,15 @@
 				let playerHighlight = document.createElement("div");
 				playerHighlight.id = "currentPlayer";
 				S.getId("gameScreen").appendChild(playerHighlight);
-				showWhoseTurn();
 
 				this.textContent = "Restart";
+				S.getId("employAI").disabled = false;
+			});
+
+
+
+			S.listen("employAI", "click", function () {
+				new Opponent(currentPlayer).takeATurn();
 			});
 		</script>
 		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/foundation.css">
@@ -210,9 +239,11 @@
 				position: relative;
 				width: var(--game-screen-width);
 				height: var(--game-screen-width);
+				overflow: hidden;
 			}
 			#currentPlayer {
 				position: absolute;
+				left: 100%;
 				border-width: var(--size-unit);
 				border-style: solid;
 				border-color: yellow;
@@ -261,6 +292,10 @@
 			</button>
 			<br>
 			<div class="generic-background" id="gameScreen"></div>
+			<br>
+			<button id="employAI" disabled>
+				Let AI take<br>a turn
+			</button>
 		</main>
 	</body>
 </html>
