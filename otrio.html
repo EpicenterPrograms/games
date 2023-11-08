@@ -129,12 +129,23 @@
 						position.x = Math.floor(Math.random() * size.x);
 						position.y = Math.floor(Math.random() * size.y);
 						do {
-							position.z = Math.floor(Math.random() * size.z);
+							let possibleZs = Array(size.z).fill(null).map((_, index) => index);  // makes an array of indices up to size.z
+							let zWeights = possibleZs.slice(0).fill(1);  // weights of preference for the possible z-position choices
+							// if the desired location is at a corner
+							if ((position.x === 0 || position.x === size.x - 1) && (position.y === 0 || position.y === size.y - 1)) {
+								// make large and small z-positions more likely
+								zWeights[0] = 2;
+								zWeights[zWeights.length - 1] = 2;
+							} else {
+								// make medium z-positions more likely
+								zWeights.fill(2, 1, -1);
+							}
+							position.z = weightedRandomChoice(possibleZs, zWeights);
 							failsafe--;
-						} while (standbys[currentPlayer][position.z].length == 0 && failsafe);
+						} while (standbys[currentPlayer][position.z].length == 0 && failsafe);  // while there isn't a piece available
 						desiredOption = options[position.x][position.y];
 						currentLayer = position.z;
-					} while (!choiceAvailable(desiredOption) && failsafe);
+					} while (!choiceAvailable(desiredOption) && failsafe);  // while the desired location is filled
 					if (failsafe) {  // if the failsafe wasn't triggered
 						currentPiece = standbys[currentPlayer][currentLayer][0];
 						makeAMove(desiredOption);
