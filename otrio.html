@@ -52,6 +52,18 @@
 				*/
 				return option.dataset["z" + currentLayer + "IsOpen"] === "true" ? true : false;
 			}
+			function placeOpen(x, y, z, playerNumber = -1) {
+				/**
+				checks whether a location is open
+				additionally optionally checks whether a certain player has a piece they can put there
+				*/
+				let placeIsOpen = gameState[x][y][z] === -1 ? true : false;
+				if (playerNumber > -1) {
+					return placeIsOpen && standbys[playerNumber][z].length > 0;
+				} else {
+					return placeIsOpen;
+				}
+			}
 
 			function showWhoseTurn() {
 				if (currentPlayer < 3) {
@@ -68,70 +80,59 @@
 				S.getId("currentPlayer").style[["left", "top", "right", "bottom"][currentPlayer]] = "0em";
 			}
 
+			function playerHasWon(playerNumber, state) {
+				const directions = [
+					{ x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 },
+					{ x: 1, y: 1, z: 0 }, { x: 1, y: 0, z: 1 }, { x: 0, y: 1, z: 1 },
+					{ x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 0 }, { x: -1, y: 0, z: 1 },
+					{ x: 0, y: -1, z: 1 }, { x: -1, y: 1, z: 1 }, { x: 1, y: -1, z: 1 },
+					{ x: 1, y: 1, z: -1 }, { x: -1, y: -1, z: 1 }, { x: -1, y: 1, z: -1 },
+					{ x: 1, y: -1, z: -1 }
+				];
+				// finds all of the player's pieces
+				for (let x = 0; x < state.length; x++) {
+					for (let y = 0; y < state[x].length; y++) {
+						for (let z = 0; z < state[x][y].length; z++) {
+							if (state[x][y][z] === playerNumber) {
+								// looks in every direction for a long enough row
+								for (let i = 0; i < directions.length; i++) {
+									let score = 1;
+									let cx = x, cy = y, cz = z;
+									const dir = directions[i];
+									while (true) {
+										cx += dir.x;
+										cy += dir.y;
+										cz += dir.z;
+										// follows any developing row
+										if (state[cx]?.[cy]?.[cz] === playerNumber) {
+											score++;
+											// declares a win if enough pieces are in a row
+											if (score >= winScore) return true;
+										} else {
+											break;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				return false;
+			}
+
 			function gameHasEnded() {
 				// checks if anyone has won
 				let winner = -1;
 				S.forEach(4, function (_, playerNumber) {
-					S.forEach(gameState, function (yList, xIndex) {
-						S.forEach(yList, function (zList, yIndex) {
-							S.forEach(zList, function (occupant, zIndex) {
-								if (occupant === playerNumber) {
-									let currentPos = {
-										x: xIndex,
-										y: yIndex,
-										z: zIndex
-									}
-									S.forEach([-1, 0, 1], function (xOffset) {
-										S.forEach([-1, 0, 1], function (yOffset) {
-											S.forEach([-1, 0, 1], function (zOffset) {
-												if (!(xOffset === 0 && yOffset === 0 && zOffset === 0)) {
-													let score = 1;
-													while (true) {
-														let nextX = currentPos.x + xOffset;
-														if (gameState[nextX] !== undefined) {
-															let nextY = currentPos.y + yOffset;
-															if (gameState[nextX][nextY] !== undefined) {
-																let nextZ = currentPos.z + zOffset;
-																if (gameState[nextX][nextY][nextZ] !== undefined) {
-																	if (gameState[nextX][nextY][nextZ] === playerNumber) {
-																		score++;
-																		if (score < winScore) {
-																			currentPos = {
-																				x: nextX,
-																				y: nextY,
-																				z: nextZ
-																			}
-																		} else {  // if a player won
-																			winner = playerNumber;
-																			break;
-																		}
-																	} else {
-																		break;
-																	}
-																} else {
-																	break;
-																}
-															} else {
-																break;
-															}
-														} else {
-															break;
-														}
-													}
-												}
-											});
-										});
-									});
-								}
-							});
-						});
-					});
+					if (playerHasWon(playerNumber, gameState)) {
+						winner = playerNumber;
+						return "break";
+					}
 				});
 				if (winner > -1) {
 					S.makeDialog("The " + colors[winner] + " player won!");
 					return true;
 				}
-
 				// checks if there's a stalemate
 				let stalemate = true;
 				S.forEach(options, function (xList) {
@@ -148,6 +149,25 @@
 					S.makeDialog("No more spaces are available.");
 					return true;
 				}
+				// checks if the next player can move
+				let canMove = false;
+				S.forEach(gameState, function (yList, xIndex) {
+					S.forEach(yList, function (zList, yIndex) {
+						S.forEach(zList, function (occupant, zIndex) {
+							if (occupant === -1) {  // if the place is open
+								if (standbys[(currentPlayer + 1) % 4][zIndex].length > 0) {  // if the next player can place a piece there
+									canMove = true;
+								}
+							}
+						});
+					});
+				});
+				if (!canMove) {
+					S.makeDialog("The next player can't move");
+					return true;
+				}
+				// says the game hasn't ended if execution got this far
+				return false;
 			}
 
 			function makeAMove(option) {
@@ -172,52 +192,118 @@
 					showWhoseTurn();
 				}
 			}
+			function moveAPiece(playerNumber, x, y, z) {
+				currentPlayer = playerNumber;
+				let piece = standbys[playerNumber][z][0];
+				let dest = options[x][y];
+				S.forEach(["top", "bottom", "left", "right"], function (side) {
+					piece.style[side] = "auto";  // prevents irregularities from a value on a different side conflicting
+				});
+				piece.style.left = "calc(" + dest.style.left + " + var(--game-space-width) / 2 - " + piece.style.width + " / 2)";
+				piece.style.top = "calc(" + dest.style.top + " + var(--game-space-width) / 2 - " + piece.style.width + " / 2)";
+				gameState[x][y][z] = playerNumber;  // updates who's in the space
+				standbys[playerNumber][z].splice(standbys[playerNumber][z].indexOf(piece), 1);  // removes the current piece from the available options
+				piece.style.pointerEvents = "none";
+				dest.dataset["z" + z + "IsOpen"] = false;
+				piece = null;
+				if (gameHasEnded()) {
+					S.getId("currentPlayer").style.left = "100%";
+					S.getId("gameScreen").style.pointerEvents = "none";
+					S.getId("employAI").disabled = "disabled";
+				} else {
+					showWhoseTurn();
+				}
+			}
 
 
 
-			var Opponent = function (playerNumber, startingPoint) {
+			var Opponent = function (playerNumber) {
 				/**
-				Provides an adaptive opponent with an optional previous level of knowledge
+				Provides an artificial opponent to play against
 				*/
 				var opponent = this;
 
 				this.takeATurn = function () {
-					var position = {  // the position where the opponent is planning on placing a piece
-						x: 0,
-						y: 0,
-						z: 0,
-					};
-					var desiredOption;
-					currentPlayer = playerNumber;
-					var failsafe = 500;  // the maximum number of loops allowed (prevents infinite loops)
-					do {
-						position.x = Math.floor(Math.random() * size.x);
-						position.y = Math.floor(Math.random() * size.y);
-						do {
-							let possibleZs = Array(size.z).fill(null).map((_, index) => index);  // makes an array of indices up to size.z
-							let zWeights = possibleZs.slice(0).fill(1);  // weights of preference for the possible z-position choices
-							// if the desired location is at a corner
-							if ((position.x === 0 || position.x === size.x - 1) && (position.y === 0 || position.y === size.y - 1)) {
-								// make large and small z-positions more likely
-								zWeights[0] = 2;
-								zWeights[zWeights.length - 1] = 2;
-							} else {
-								// make medium z-positions more likely
-								zWeights.fill(2, 1, -1);
+					// finds all of the possible positions remaining
+					var optionsAvailable = [];
+					var optionWeights = [];
+					S.forEach(gameState, function (yList, xIndex) {
+						S.forEach(yList, function (zList, yIndex) {
+							S.forEach(zList, function (occupant, zIndex) {
+								if (occupant === -1) {  // if the place is open
+									optionsAvailable.push({ x: xIndex, y: yIndex, z: zIndex });
+									// prefers middle pieces in the middle
+									let isCorner = (xIndex == 0 || xIndex == size.x - 1) && (yIndex == 0 || yIndex == size.y - 1);
+									if (isCorner) {
+										if (zIndex == 0 || zIndex == size.z - 1) {
+											optionWeights.push(2);
+										} else {
+											optionWeights.push(1);
+										}
+									} else {
+										if (zIndex == 0 || zIndex == size.z - 1) {
+											optionWeights.push(1);
+										} else {
+											optionWeights.push(2);
+										}
+									}
+								}
+							});
+						});
+					});
+					// checks whether it's possible to win
+					let canWin = false;
+					S.forEach(optionsAvailable, function (o, index) {
+						let potentialState = JSON.parse(JSON.stringify(gameState));
+						if (standbys[playerNumber][o.z].length > 0) {  // if the player can place a piece there
+							potentialState[o.x][o.y][o.z] = playerNumber;
+							if (playerHasWon(playerNumber, potentialState)) {
+								optionWeights[index] = 1000;
+								canWin = true;
 							}
-							position.z = weightedRandomChoice(possibleZs, zWeights);
-							failsafe--;
-						} while (standbys[currentPlayer][position.z].length == 0 && failsafe);  // while there isn't a piece available
-						desiredOption = options[position.x][position.y];
-						currentLayer = position.z;
-					} while (!choiceAvailable(desiredOption) && failsafe);  // while the desired location is filled
-					if (failsafe) {  // if the failsafe wasn't triggered
-						currentPiece = standbys[currentPlayer][currentLayer][0];
-						makeAMove(desiredOption);
-					} else {  // if there's likely an infinite loop error
-						console.error("An opponent got stuck in an infinite loop");
-						S.makeDialog("The opponent couldn't determine a move to make.");
+						} else {
+							optionWeights[index] = 0;
+						}
+					});
+					// strategizes if a win isn't possible
+					if (!canWin) {
+						// sees if someone else is about to win
+						let blockNeeded = false;
+						let nextPlayer = playerNumber;
+						S.forEach(3, function (_, nextIndex) {
+							nextPlayer++;
+							nextPlayer %= 4;
+							let wins = 0;
+							S.forEach(optionsAvailable, function (o, index) {
+								let potentialState = JSON.parse(JSON.stringify(gameState));
+								if (standbys[nextPlayer][o.z].length > 0) {  // if the next player can place a piece there
+									potentialState[o.x][o.y][o.z] = nextPlayer;
+									if (playerHasWon(nextPlayer, potentialState)) {
+										wins++;
+										if (standbys[playerNumber][o.z].length > 0) {  // if the original player can place a piece there
+											if (wins > nextIndex) {
+												if (S.getId("dumberOpponent").checked) {
+													optionWeights[index] = 30;
+												} else {
+													optionWeights[index] = 1000;
+												}
+												blockNeeded = true;
+											} else {
+												optionWeights[index] = 3;
+											}
+										}
+									}
+								}
+							});
+						});
+						// plans ahead if it has the freedom to do so
+						if (!blockNeeded) {
+							//// strategy here
+						}
 					}
+					// makes a final decision on a move
+					let chosenMove = weightedRandomChoice(optionsAvailable, optionWeights);
+					moveAPiece(playerNumber, chosenMove.x, chosenMove.y, chosenMove.z);
 				}
 			};
 
@@ -376,7 +462,7 @@
 		</h1>
 		<main>
 			<section>
-				3-dimensional Tic-Tac-Toe
+				This game is basically 3-dimensional Tic-Tac-Toe. To win, get 3 pieces in one spot, 3 of the same size in a row, or 3 of increasing size in a row. Letting the AI take a turn will cause the program to automatically make a reasonably strategic move. When the AI isn't less likely to block wins, it should be next to impossible to sneak in a win, but the moment I stop paying attention and start pressing the button too much, people start winning somehow, so maybe you can get away with it.
 			</section>
 			<button id="play">
 				Play
@@ -387,6 +473,10 @@
 			<button id="employAI" disabled>
 				Let AI take<br>a turn
 			</button>
+			<h3>
+				AI settings
+			</h3>
+			<input type="checkbox" id="dumberOpponent"> <label for="dumberOpponent">Make less likely to block wins</label>
 		</main>
 	</body>
 </html>
