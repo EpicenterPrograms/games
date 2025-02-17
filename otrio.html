@@ -504,6 +504,7 @@
 						resetBoard();
 						alignWithServer();
 						monitorStatus();
+						S.getId("play").textContent = "Restart";
 					} else if (status == "left") {  // if the player left the specified game
 						if (serverChecker) {
 							clearInterval(serverChecker);  // stops updating the game
