@@ -5,11 +5,15 @@
 			Games
 		</title>
 		<base target="_blank">
-		<script src="https://epicenterprograms.github.io/standards/behavior/general.js"></script>
+		<script src="https://www.gstatic.com/firebasejs/4.6.1/firebase.js"></script>
+		<script src="https://www.gstatic.com/firebasejs/4.6.1/firebase-firestore.js"></script>
+		<script src="https://epicenterprograms.github.io/standards/behavior/firebaseinit.js"></script>
 		<script src="https://epicenterprograms.github.io/standards/behavior/storage.js"></script>
+		<script src="https://epicenterprograms.github.io/standards/behavior/general.js"></script>
 		<script src="https://epicenterprograms.github.io/standards/behavior/game.js"></script>
 		<script src="behavior.js"></script>
 		<script>
+			/*
 			S.listen("checkCode", "click", function () {
 				document.body.style.cursor = "wait";
 				S.getId("checkCode").disabled = true;
@@ -43,6 +47,7 @@
 					}
 				});
 			});
+			*/
 		</script>
 		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/foundation.css">
 		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/game.css">
@@ -58,6 +63,7 @@
 			<section>
 				This allows you to play games. Use the same save code as a friend to play with them online.
 			</section>
+			<!--
 			<h4>
 				Set your save code
 			</h4>
@@ -65,6 +71,7 @@
 			<button id="checkCode">
 				Check and set
 			</button>
+			-->
 		</main>
 	</body>
 </html>

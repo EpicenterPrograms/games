@@ -50,7 +50,8 @@
 			var piecesPerLayer = 3;  // the number of pieces allowed per layer
 			var messages = [];  // messages shared by online players
 			var serverChecker;  // an interval reference which checks for changes on the server
-			var messageColor = Math.round(Math.random() * 360);  // a random HSL hue to identify messages from this user
+			var messageBackground = Math.round(Math.random() * 360);  // a random HSL hue to identify messages from this user
+			var messageBorder = Math.round(Math.random() * 360);  // a random HSL hue to identify messages from this user
 
 			function choiceAvailable(option) {
 				/**
@@ -411,7 +412,6 @@
 				playerHighlight.id = "currentPlayer";
 				S.getId("gameScreen").appendChild(playerHighlight);
 
-				this.textContent = "Restart";
 				S.getId("gameScreen").style.pointerEvents = "auto";
 				S.getId("employAI").disabled = false;
 			}
@@ -421,6 +421,7 @@
 				if (hasGameCode("otrio")) {
 					sendData();
 				}
+				this.textContent = "Restart";
 			});
 
 
@@ -469,7 +470,8 @@
 					let msgBox = document.createElement("div");
 					msgBox.textContent = msg.text;
 					msgBox.innerHTML = msgBox.textContent.replace(/(^|[^:])\/\/(.+?)\/\//g, "$1<em>$2</em>").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/__(.+?)__/g, '<span style="text-decoration:underline">$1</span>').replace(/(https?:\/\/[^. \n]+(?:\.[^. \n]+)+)/g, "<a href='$1'>$1</a>");
-					msgBox.style.background = "hsla(" + msg.color + ", 100%, 50%, 50%)";
+					msgBox.style.background = "hsla(" + msg.background + ", 100%, 50%, 50%)";
+					msgBox.style.borderColor = "hsla(" + msg.border + ", 100%, 50%, 50%)";
 					S.getId("messageBoard").prepend(msgBox);
 				});
 				messages = providedMsgs;
@@ -514,7 +516,8 @@
 				if (S.getId("messageDraft").value.trim()) {  // if there's a message to send
 					let newMessage = {
 						text: S.getId("messageDraft").value.trim(),
-						color: messageColor,
+						background: messageBackground,
+						border: messageBorder,
 						timestamp: new Date().getTime()
 					};
 					M.server.recall("messages").then(function (serverMsgs) {
@@ -554,6 +557,9 @@
 
 			S.onLoad(function () {
 				tryLoadingGame("otrio");
+
+				S.getId("msgSample").style.background = "hsla(" + messageBackground + ", 100%, 50%, 50%)";
+				S.getId("msgSample").style.borderColor = "hsla(" + messageBorder + ", 100%, 50%, 50%)";
 			});
 		</script>
 		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/foundation.css">
@@ -602,8 +608,17 @@
 			#messageBoard div {
 				display: block;
 				margin: .5em;
+				border-width: .25em;
 				border-radius: .5em;
+				border-style: solid;
 				padding: .5em;
+			}
+			#msgSample {
+				display: block;
+				border-width: .2em;
+				border-style: solid;
+				width: 1em;
+				height: 1em;
 			}
 
 			@media (max-width: 1000px) {
@@ -632,7 +647,7 @@
 			<section>
 				Setting a game code allows you to play with others online who use the same save code, and it allows you to message them as well. Pieces aren't assigned to specific players, so any piece can be moved by anyone. Make sure the people you play with aren't troublemakers. Game codes are automatically cleared after 48 hours of inactivity.
 			</section>
-			<section>
+			<section style="text-align:center">
 				<input type="text" id="gameCodeInput" placeholder="Game code">
 				<button id="setCodeButton">
 					Submit game code
@@ -649,6 +664,9 @@
 			<section>
 				<strong>Message board:</strong>
 			</section>
+			<section>
+				(Your colors = <div class="generic-background" style="margin-bottom:-.2em"><span id="msgSample"></span></div>)
+			</section>
 			<div class="generic-background" id="messageBoard"></div>
 			<br>
 			<input type="text" id="messageDraft" placeholder="Type your message">
@@ -656,7 +674,7 @@
 				Send
 			</button>
 			<section>
-				<span class="elaborate" style="text-decoration: dotted underline">[Learn how to make special formatting]</span>
+				<span class="elaborate" style="text-align:center; text-decoration:dotted underline;">[Learn how to make special formatting]</span>
 			</section>
 			<aside data-heading="Formatting help">
 				<h3>Italics</h3>

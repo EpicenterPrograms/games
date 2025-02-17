@@ -11,18 +11,8 @@
 
 			Standards.navigation.contents = {  // [page URL, title]
 				".": "Home",
-				"otrio": "Otrio",
-				"domination": "World domination",
-				"chatroom": "Chatroom"
+				"otrio": "Otrio"
 			};
-
-			S.onLoad(function () {
-				S.forEach(S.getTag("a"), function (a) {
-					S.listen(a, "click", function () {
-						M.session.store("/games/leaving", false);
-					});
-				});
-			});
 		</script>
 		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/foundation.css">
 	</head>
