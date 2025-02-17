@@ -9,12 +9,12 @@
 			var S = Standards.general;
 			var M = Standards.storage;
 
-			Standards.navigation.contents = [  // [page URL, title]
-				[".", "Home"],
-				["otrio", "Otrio"],
-				["defense", "Space defense"],
-				["chatroom", "Chatroom"]
-			];
+			Standards.navigation.contents = {  // [page URL, title]
+				".": "Home",
+				"otrio": "Otrio",
+				"domination": "World domination",
+				"chatroom": "Chatroom"
+			};
 
 			S.onLoad(function () {
 				S.forEach(S.getTag("a"), function (a) {

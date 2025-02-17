@@ -14,30 +14,6 @@
 		<script src="behavior.js"></script>
 		<script>
 			G.container = "gameScreen";
-			var strategyMax = 5;  // the highest number possible in the mastermind's strategy
-			var mastermind = {
-				strategy: [0, 0, 0],
-				reconsider: function () {  //// document.readyState == "complete"
-					let s = mastermind.strategy;
-					S.forEach(2, function () {
-						s[Math.floor(Math.random() * s.length)] += [-1, 0, 1][Math.floor(Math.random() * 3)];
-					});
-					S.forEach(s, function (number) {
-						if (number < 0) {
-							number = 0;
-						} else if (number > strategyMax) {
-							number = strategyMax;
-						}
-					})
-				},
-				adapt: function (newStrategy) {
-
-				},
-				minions: [],
-				spawnMinion: function () {
-
-				}
-			};
 
 			S.onLoad(function () {
 
@@ -58,11 +34,14 @@
 			<iframe src="navigation.html"></iframe>
 		</nav>
 		<h1 class="main-title">
-			Space defense
+			World domination
 		</h1>
 		<main>
 			<section>
-				Shoot the invaders.
+				Collect brownies. Deploy attack kittens. Conquer the world.
+			</section>
+			<section>
+				It'll be a while before this game can be played.
 			</section>
 			<div id="gameScreen"></div>
 		</main>

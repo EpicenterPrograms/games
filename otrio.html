@@ -45,6 +45,9 @@
 			var players = 1;  // the number of real players
 			var colors = ["red", "green", "blue", "purple"];  // the color of the player pieces clockwise from bottom
 			var piecesPerLayer = 3;  // the number of pieces allowed per layer
+			var messages = [];  // messages shared by online players
+			var serverChecker;  // an interval reference which checks for changes on the server
+			var messageColor = Math.round(Math.random() * 360);  // a random HSL hue to identify messages from this user
 
 			function choiceAvailable(option) {
 				/**
@@ -65,11 +68,13 @@
 				}
 			}
 
-			function showWhoseTurn() {
-				if (currentPlayer < 3) {
-					currentPlayer++;
-				} else {
-					currentPlayer = 0;
+			function showWhoseTurn(increment = true) {
+				if (increment) {
+					if (currentPlayer < 3) {
+						currentPlayer++;
+					} else {
+						currentPlayer = 0;
+					}
 				}
 				S.getId("currentPlayer").style.width = ["100%", "calc(var(--game-space-width) + var(--size-unit) * 2.25)"][currentPlayer % 2];
 				S.getId("currentPlayer").style.height = ["calc(var(--game-space-width) + var(--size-unit) * 2.25)","100%"][currentPlayer % 2];
@@ -304,12 +309,16 @@
 					// makes a final decision on a move
 					let chosenMove = weightedRandomChoice(optionsAvailable, optionWeights);
 					moveAPiece(playerNumber, chosenMove.x, chosenMove.y, chosenMove.z);
+					// sends the updated game state to the server if necessary
+					if (hasGameCode("otrio")) {
+						sendData();
+					}
 				}
 			};
 
 
 
-			S.listen("play", "click", function () {
+			function resetBoard() {
 				// resets all of the variables
 				size = {  // the size of the game board
 					x: 3,
@@ -350,6 +359,10 @@
 						square.addEventListener("click", function () {
 							if (currentPiece !== null && choiceAvailable(this)) {
 								makeAMove(this);
+								// sends the updated game state to the server if necessary
+								if (hasGameCode("otrio")) {
+									sendData();
+								}
 							}
 						});
 					});
@@ -398,12 +411,144 @@
 				this.textContent = "Restart";
 				S.getId("gameScreen").style.pointerEvents = "auto";
 				S.getId("employAI").disabled = false;
+			}
+
+			S.listen("play", "click", function () {
+				resetBoard();
+				if (hasGameCode("otrio")) {
+					sendData();
+				}
+			});
+
+
+
+			function sendData() {
+				let data = {
+					gameState: gameState,
+					currentPlayer: currentPlayer,
+					messages: messages,
+					lastUpdated: new Date().getTime()
+				}
+				M.server.store("./", data).catch(function (error) {
+					S.makeDialog("There was a problem sending your data.");
+					console.error(error);
+				});
+			}
+
+			function updateGame(newState) {
+				if (JSON.stringify(newState) != JSON.stringify(gameState)) {  // if the current display doesn't match what's on the server
+					let usedSpots = 0;  // the number of spaces used according to the server
+					S.forEach(newState, function (yList, x) {
+						S.forEach(yList, function (zList, y) {
+							S.forEach(zList, function (playerNum, z) {
+								if (playerNum != -1) {
+									usedSpots++;
+									if (gameState[x][y][z] != playerNum) {  // if a space is open that shouldn't be
+										moveAPiece(playerNum, x, y, z);
+									}
+								}
+							});
+						});
+					});
+					if (usedSpots == 0) {
+						resetBoard();
+					}
+				}
+			}
+
+			function updateMessages(providedMsgs) {
+				// create a Set of timestamps for quick lookup
+				const existingTimestamps = new Set(messages.map(msg => msg.timestamp));
+				// filter newMsgs to include only items that don't already exist
+				let newMsgs = providedMsgs.filter(msg => !existingTimestamps.has(msg.timestamp));
+				// add missing messages to the message board
+				S.forEach(newMsgs, function (msg) {
+					let msgBox = document.createElement("div");
+					msgBox.textContent = msg.text;
+					msgBox.innerHTML = msgBox.textContent.replace(/(^|[^:])\/\/(.+?)\/\//g, "$1<em>$2</em>").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/__(.+?)__/g, '<span style="text-decoration:underline">$1</span>').replace(/(https?:\/\/[^. \n]+(?:\.[^. \n]+)+)/g, "<a href='$1'>$1</a>");
+					msgBox.style.background = "hsla(" + msg.color + ", 100%, 50%, 50%)";
+					S.getId("messageBoard").prepend(msgBox);
+				});
+				messages = providedMsgs;
+			}
+
+			function monitorStatus() {
+				if (hasGameCode("otrio")) {
+					serverChecker = setInterval(function () {
+						M.server.recall("./").then(function (data) {
+							updateGame(data.gameState);
+							currentPlayer = data.currentPlayer;
+							showWhoseTurn(false);
+							updateMessages(data.messages);
+						});
+					}, 3000);  // rechecks every 3 seconds
+				}
+			}
+
+			S.listen("setCodeButton", "click", function () {
+				setGameCode("otrio").then(function (status) {
+					if (status == "created") {  // if starting with a new game code
+						S.getId("play").click();
+						monitorStatus();
+					} else if (status == "joined") {  // if using a preexisting game code
+						resetBoard();
+						updateGame(data.gameState);
+						currentPlayer = data.currentPlayer;
+						showWhoseTurn(false);
+						updateMessages(data.messages);
+						monitorStatus();
+					} else if (status == "left") {  // if the player left the specified game
+						if (serverChecker) {
+							clearInterval(serverChecker);  // stops updating the game
+						}
+					}
+				});
+			});
+
+			function sendMessage() {
+				if (S.getId("messageDraft").value.trim()) {  // if there's a message to send
+					let newMessage = {
+						text: S.getId("messageDraft").value.trim(),
+						color: messageColor,
+						timestamp: new Date().getTime()
+					};
+					M.server.recall("messages").then(function (serverMsgs) {
+						serverMsgs.push(newMessage);
+						Promise.all([
+							M.server.store("messages", serverMsgs),
+							M.server.store("lastUpdated", new Date().getTime())
+						]).catch(function (error) {
+							S.makeDialog("There was a problem sending your message.");
+							console.error("The messages couldn't be stored.");
+							console.error(error);
+						});
+					}).catch(function (error) {
+						S.makeDialog("There was a problem sending your message.");
+						console.error("The messages couldn't be recalled.");
+						console.error(error);
+					});
+					updateMessages([...messages, newMessage]);
+					messages.push(newMessage);
+					S.getId("messageDraft").value = "";
+				}
+			}
+			S.listen("sendMessage", "click", sendMessage);
+			S.listen("messageDraft", "keyup", function (event) {
+				if (event.key == "Enter") {
+					sendMessage();
+				}
 			});
 
 
 
 			S.listen("employAI", "click", function () {
 				new Opponent(currentPlayer).takeATurn();
+			});
+
+
+
+			S.onLoad(function () {
+				tryLoadingGame("otrio");
 			});
 		</script>
 		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/foundation.css">
@@ -439,9 +584,21 @@
 				z-index: 1;
 				border-width: var(--size-unit);
 				border-style: solid;
-				border-radius: var(--game-space-width); /* just an abritrary number higher than will be ever used */
+				border-radius: var(--game-space-width);  /* just an abritrary number higher than will be ever used */
 				cursor: pointer;
 				transition: 1s;
+			}
+
+			#messageBoard {
+				width: 80%;
+				height: 9em;
+				overflow: auto;
+			}
+			#messageBoard div {
+				display: block;
+				margin: .5em;
+				border-radius: .5em;
+				padding: .5em;
 			}
 
 			@media (max-width: 1000px) {
@@ -467,15 +624,56 @@
 			<section>
 				This game is basically 3-dimensional Tic-Tac-Toe. To win, get 3 pieces in one spot, 3 of the same size in a row, or 3 of increasing size in a row. Letting the AI take a turn will cause the program to automatically make a reasonably strategic move. When the AI isn't less likely to block wins, it should be next to impossible to sneak in a win, but the moment I stop paying attention and start pressing the button too much, people start winning somehow, so maybe you can get away with it.
 			</section>
+			<section>
+				Setting a game code allows you to play with others online who use the same save code, and it allows you to message them as well. Pieces aren't assigned to specific players, so any piece can be moved by anyone. Make sure the people you play with aren't troublemakers. Game codes are automatically cleared after 48 hours of inactivity.
+			</section>
+			<section>
+				<input type="text" id="gameCodeInput" placeholder="Game code">
+				<button id="setCodeButton">
+					Submit game code
+				</button>
+			</section>
 			<button id="play">
 				Play
 			</button>
-			<br>
-			<div class="generic-background" id="gameScreen"></div>
-			<br>
 			<button id="employAI" disabled>
 				Let AI take<br>a turn
 			</button>
+			<br>
+			<div class="generic-background" id="gameScreen"></div>
+			<section>
+				<strong>Message board:</strong>
+			</section>
+			<div class="generic-background" id="messageBoard"></div>
+			<br>
+			<input type="text" id="messageDraft" placeholder="Type your message">
+			<button id="sendMessage">
+				Send
+			</button>
+			<section>
+				<span class="elaborate" style="text-decoration: dotted underline">[Learn how to make special formatting]</span>
+			</section>
+			<aside data-heading="Formatting help">
+				<h3>Italics</h3>
+				<section>Surround the word or words to be italicized with two slashes.</section>
+				<section>//Stuff// = <em>Stuff</em></section>
+				<h3>Bolding</h3>
+				<section>Surround the word or words to be bolded with two asterisks.</section>
+				<section>**Stuff** = <strong>Stuff</strong></section>
+				<h3>Underlining</h3>
+				<section>Surround the word or words to be underlined with two underscores.</section>
+				<section>__Stuff__ = <span style="text-decoration:underline">Stuff</span></section>
+				<h3>Combining</h3>
+				<section>Text can have more than one type of formatting as long as the markup doesn't have to cross any other markup. (Treat them like parentheses.)</section>
+				<section>//**__Stuff__**// = <em><strong><span style="text-decoration:underline">Stuff</span></strong></em></section>
+				<section><del style="color:red">//**__Stuff//**__</del></section>
+				<section>//**Stuff**// **and stuffity stuff** = <em><strong>Stuff</strong></em> <strong>and stuffity stuff</strong></section>
+				<section>**//Stuff// and stuffity stuff** = <strong><em>Stuff</em> and stuffity stuff</strong></section>
+				<section><del style="color:red">//**Stuff// and stuffity stuff**</del></section>
+				<h3>Other</h3>
+				<section>Full links will become clickable.</section>
+				<section>https://coolprogramminguser.github.io/games/ = <a href="https://coolprogramminguser.github.io/games/">https://coolprogramminguser.github.io/games/</a></section>
+			</aside>
 			<h2>
 				AI settings
 			</h2>
