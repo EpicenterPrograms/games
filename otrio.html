@@ -427,7 +427,7 @@
 
 			function sendData() {
 				let data = {
-					gameState: gameState,
+					gameState: JSON.stringify(gameState),  // nested arrays aren't allowed to be stored
 					currentPlayer: currentPlayer,
 					messages: messages,
 					lastUpdated: new Date().getTime()
@@ -475,16 +475,21 @@
 				messages = providedMsgs;
 			}
 
+			function alignWithServer() {
+				M.server.recall("./").then(function (data) {
+					updateGame(JSON.parse(data.gameState));
+					currentPlayer = data.currentPlayer;
+					showWhoseTurn(false);
+					updateMessages(data.messages);
+				}).catch(function (error) {
+					console.error("There was an error syncing the game state.");
+					console.error(error);
+				});
+			}
+
 			function monitorStatus() {
 				if (hasGameCode("otrio")) {
-					serverChecker = setInterval(function () {
-						M.server.recall("./").then(function (data) {
-							updateGame(data.gameState);
-							currentPlayer = data.currentPlayer;
-							showWhoseTurn(false);
-							updateMessages(data.messages);
-						});
-					}, 3000);  // rechecks every 3 seconds
+					serverChecker = setInterval(alignWithServer, 3000);  // rechecks every 3 seconds
 				}
 			}
 
@@ -495,10 +500,7 @@
 						monitorStatus();
 					} else if (status == "joined") {  // if using a preexisting game code
 						resetBoard();
-						updateGame(data.gameState);
-						currentPlayer = data.currentPlayer;
-						showWhoseTurn(false);
-						updateMessages(data.messages);
+						alignWithServer();
 						monitorStatus();
 					} else if (status == "left") {  // if the player left the specified game
 						if (serverChecker) {
