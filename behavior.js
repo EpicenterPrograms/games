@@ -77,7 +77,7 @@ function setGameCode(site, code) {
 			if (S.getType(code) == "String" && code.trim().length > 0) {
 				code = code.trim();
 				let encodedCode = encodeURIComponent(code);
-				M.server.list("^websites/games/" + site + "/game codes/", { maxDepth: 1, indicateFolders: false }).then(function (codes) {
+				M.server.list("^websites/games/" + site + "/game codes/", { maxDepth: 1, hybridCutoff: 5, indicateFolders: false }).then(function (codes) {
 					if (codes.includes(encodedCode)) {
 						S.makeDialog('The code "' + code + '" already exists. Do you want to join the game?', {
 							Yes: function () {
@@ -124,12 +124,12 @@ function setGameCode(site, code) {
 // cleans up inactive games
 S.onLoad(function () {
 	S.forEach(["otrio"], function (site) {
-		M.server.list("^websites/games/" + site + "/game codes/", { maxDepth: 1, hybridCutoff: 3 }).then(function (codes) {
+		M.server.list("^websites/games/" + site + "/game codes/", { maxDepth: 1, hybridCutoff: 5 }).then(function (codes) {
 			console.log(codes);
 			let activeGames = [];
 			let updatedTimes = {};
 			S.forEach(codes, function (code) {
-				activeGames.push(M.server.recall("^websites/games/" + site + "/game codes/" + code + "lastUpdated", { hybridCutoff: 3 }).then(function (time) {
+				activeGames.push(M.server.recall("^websites/games/" + site + "/game codes/" + code + "lastUpdated", { hybridCutoff: 5 }).then(function (time) {
 					console.log(time);
 					updatedTimes[code] = time;
 				}));
@@ -140,7 +140,7 @@ S.onLoad(function () {
 				S.forEach(updatedTimes, function (time, code) {
 					console.log(now - time);
 					if (now - time > 172800000) {  // if the game hasn't been played in the last 48 hours
-						M.server.forget("^websites/games/" + site + "/game codes/" + code, { hybridCutoff: 3 });
+						M.server.forget("^websites/games/" + site + "/game codes/" + code, { hybridCutoff: 5 });
 					}
 				});
 			});
