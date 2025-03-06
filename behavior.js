@@ -125,16 +125,20 @@ function setGameCode(site, code) {
 S.onLoad(function () {
 	S.forEach(["otrio"], function (site) {
 		M.server.list("^websites/games/" + site + "/game codes/", { maxDepth: 1, hybridCutoff: 3 }).then(function (codes) {
+			console.log(codes);
 			let activeGames = [];
 			let updatedTimes = {};
 			S.forEach(codes, function (code) {
 				activeGames.push(M.server.recall("^websites/games/" + site + "/game codes/" + code + "lastUpdated", { hybridCutoff: 3 }).then(function (time) {
+					console.log(time);
 					updatedTimes[code] = time;
 				}));
 			});
 			Promise.all(activeGames).then(function () {  // once all the last updated times have been retrieved
+				console.log("retrieved all times");
 				let now = new Date().getTime();
 				S.forEach(updatedTimes, function (time, code) {
+					console.log(now - time);
 					if (now - time > 172800000) {  // if the game hasn't been played in the last 48 hours
 						M.server.forget("^websites/games/" + site + "/game codes/" + code, { hybridCutoff: 3 });
 					}
