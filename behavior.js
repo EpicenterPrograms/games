@@ -77,7 +77,7 @@ function setGameCode(site, code) {
 			if (S.getType(code) == "String" && code.trim().length > 0) {
 				code = code.trim();
 				let encodedCode = encodeURIComponent(code);
-				M.server.list("^websites/games/" + site + "/game codes/", { shallowKeyList: true }).then(function (codes) {
+				M.server.list("^websites/games/" + site + "/game codes/", { maxDepth: 1, indicateFolders: false }).then(function (codes) {
 					if (codes.includes(encodedCode)) {
 						S.makeDialog('The code "' + code + '" already exists. Do you want to join the game?', {
 							Yes: function () {
@@ -123,19 +123,24 @@ function setGameCode(site, code) {
 
 // cleans up inactive games
 S.onLoad(function () {
-	M.server.list("^websites/games/otrio/game codes/", { shallowKeyList: true }).then(function (codes) {
+	console.log("loading");
+	M.server.list("^websites/games/otrio/game codes/", { maxDepth: 1 }).then(function (codes) {
+		console.log(codes);
 		let activeGames = [];
 		let updatedTimes = {};
 		S.forEach(codes, function (code) {
-			activeGames.push(M.server.recall("^websites/games/otrio/game codes/" + code + "/lastUpdated").then(function (time) {
+			activeGames.push(M.server.recall("^websites/games/otrio/game codes/" + code + "lastUpdated").then(function (time) {
+				console.log(time);
 				updatedTimes[code] = time;
 			}));
 		});
 		Promise.all(activeGames).then(function () {  // once all the last updated times have been retrieved
+			console.log("got all times");
 			let now = new Date().getTime();
 			S.forEach(updatedTimes, function (time, code) {
+				console.log(now - time);
 				if (now - time > 172800000) {  // if the game hasn't been played in the last 48 hours
-					M.server.forget("^websites/games/otrio/game codes/" + code + "/");
+					M.server.forget("^websites/games/otrio/game codes/" + code);
 				}
 			});
 		});
