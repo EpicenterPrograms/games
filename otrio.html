@@ -568,6 +568,18 @@
 					sendMessage();
 				}
 			});
+
+			S.listen("msgBgColor", "input", function () {
+				messageBackground = this.value;
+				S.getId("msgSample").style.background = "hsla(" + messageBackground + ", 100%, 50%, 50%)";
+				this.style.accentColor = "hsla(" + messageBackground + ", 100%, 50%, 50%)";
+			});
+			S.listen("msgBdColor", "input", function () {
+				messageBorder = this.value;
+				S.getId("msgSample").style.borderColor = "hsla(" + messageBorder + ", 100%, 50%, 50%)";
+				this.style.accentColor = "hsla(" + messageBorder + ", 100%, 50%, 50%)";
+			});
+
 			S.listen("speakMessages", "click", function () {
 				if (this.checked) {
 					blabbermouth = new S.Speaker();
@@ -587,8 +599,10 @@
 			S.onLoad(function () {
 				tryLoadingGame("otrio");
 
-				S.getId("msgSample").style.background = "hsla(" + messageBackground + ", 100%, 50%, 50%)";
-				S.getId("msgSample").style.borderColor = "hsla(" + messageBorder + ", 100%, 50%, 50%)";
+				S.getId("msgBgColor").value = messageBackground;
+				S.getId("msgBdColor").value = messageBorder;
+				S.getId("msgBgColor").dispatchEvent(new Event("input"));
+				S.getId("msgBdColor").dispatchEvent(new Event("input"));
 
 				if (window.location.href.includes("?")) {  // if there's data in the URL
 					let data = S.parse_str(window.location.href);
@@ -711,18 +725,28 @@
 			</button>
 			<br>
 			<div class="generic-background" id="gameScreen"></div>
-			<section>
-				<strong>Message board:</strong>
-			</section>
-			<section>
-				(Your colors = <div class="generic-background" style="margin-bottom:-.2em"><span id="msgSample"></span></div>)
-			</section>
+			<h3>
+				Message board
+			</h3>
 			<div class="generic-background" id="messageBoard"></div>
 			<br>
 			<input type="text" id="messageDraft" placeholder="Type your message">
 			<button id="sendMessage">
 				Send
 			</button>
+			<section>
+				(Your colors = <div class="generic-background" style="margin-bottom:-.2em"><span id="msgSample"></span></div>)
+			</section>
+			<table class="labeled-list">
+				<tr>
+					<th>Background color:</th>
+					<td><input type="range" min="0" max="360" id="msgBgColor"></td>
+				</tr>
+				<tr>
+					<th>Border color:</th>
+					<td><input type="range" min="0" max="360" id="msgBdColor"></td>
+				</tr>
+			</table>
 			<section>
 				<span class="elaborate" style="text-align:center; text-decoration:dotted underline;">[Learn how to make special formatting]</span>
 			</section>
