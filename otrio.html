@@ -514,7 +514,8 @@
 			});
 			S.listen("shareCodeButton", "click", function () {
 				if (hasGameCode("otrio")) {
-					let link = window.location.href.split("?")[0] + "?gc=" + S.http_build_query(M.session.recall("/games/otrio/game code"));
+					let link = window.location.href.split("?")[0] + "?" +
+						S.http_build_query({ gc: M.session.recall("/games/otrio/game code") });
 					navigator.clipboard.writeText(link).then(function () {
 						S.makeDialog("Copied!");
 					}).catch(function (error) {
