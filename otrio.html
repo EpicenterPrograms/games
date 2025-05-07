@@ -52,6 +52,7 @@
 			var serverChecker;  // an interval reference which checks for changes on the server
 			var messageBackground = Math.round(Math.random() * 360);  // a random HSL hue to identify messages from this user
 			var messageBorder = Math.round(Math.random() * 360);  // a random HSL hue to identify messages from this user
+			var blabbermouth;  // the thing that could speak new incoming messages out loud
 
 			function choiceAvailable(option) {
 				/**
@@ -473,6 +474,11 @@
 					msgBox.style.background = "hsla(" + msg.background + ", 100%, 50%, 50%)";
 					msgBox.style.borderColor = "hsla(" + msg.border + ", 100%, 50%, 50%)";
 					S.getId("messageBoard").prepend(msgBox);
+					if (blabbermouth) {  // if the new message should be spoken
+						if (S.getId("messageDraft").value != msg.text) {  // if the current user didn't type the message
+							blabbermouth.speak(msgBox.textContent);
+						}
+					}
 				});
 				messages = providedMsgs;
 			}
@@ -560,6 +566,13 @@
 			S.listen("messageDraft", "keyup", function (event) {
 				if (event.key == "Enter") {
 					sendMessage();
+				}
+			});
+			S.listen("speakMessages", "click", function () {
+				if (this.checked) {
+					blabbermouth = new S.Speaker();
+				} else {
+					blabbermouth = undefined;
 				}
 			});
 
@@ -734,6 +747,10 @@
 				<section>Full links will become clickable.</section>
 				<section>https://coolprogramminguser.github.io/games/ = <a href="https://coolprogramminguser.github.io/games/">https://coolprogramminguser.github.io/games/</a></section>
 			</aside>
+			<input type="checkbox" id="speakMessages">
+			<label for="speakMessages">Say new messages out loud</label>
+			<br>
+			<br>
 			<h2>
 				AI settings
 			</h2>
