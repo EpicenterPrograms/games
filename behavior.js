@@ -66,7 +66,7 @@ function tryLoadingGame(site, successFn) {
 	}
 }
 
-function setGameCode(site, code) {
+function setGameCode(site, code, options = {}) {
 	return new Promise(function (resolve, reject) {
 		if (S.getType(site) == "String" && site.length > 0) {
 			if (!code) {
@@ -78,24 +78,38 @@ function setGameCode(site, code) {
 				code = code.trim();
 				let encodedCode = encodeURIComponent(code);
 				M.server.list("^websites/games/" + site + "/game codes/", { maxDepth: 1, hybridCutoff: 5, indicateFolders: false }).then(function (codes) {
-					if (codes.includes(encodedCode)) {
-						S.makeDialog('The code "' + code + '" already exists. Do you want to join the game?', {
-							Yes: function () {
-								M.server.defaultLocation = "^websites/games/" + site + "/game codes/" + encodedCode;
-								M.session.store("/games/" + site + "/game code", code);
-								S.makeDialog("Success!");
-								resolve("joined");
-							}, No: resolve
-						});
+					if (options.fromURL) {
+						if (codes.includes(encodedCode)) {
+							M.server.defaultLocation = "^websites/games/" + site + "/game codes/" + encodedCode;
+							M.session.store("/games/" + site + "/game code", code);
+							S.makeDialog(`Successfully joined the game with the code "${code}".`);
+							resolve("joined");
+						} else {
+							M.session.forget(`/games/${site}/game code`);
+							M.server.defaultLocation = `^websites/games/${site}/game codes/default`;
+							S.makeDialog(`The game code "${code}" doesn't exist. Check the URL or maybe the code expired.`);
+							resolve("failed");
+						}
 					} else {
-						S.makeDialog('The code "' + code + '" does not exist. Do you want to start a game with that code?', {
-							Yes: function () {
-								M.server.defaultLocation = "^websites/games/" + site + "/game codes/" + encodedCode;
-								M.session.store("/games/" + site + "/game code", code);
-								S.makeDialog("Success!");
-								resolve("created");
-							}, No: resolve
-						});
+						if (codes.includes(encodedCode)) {
+							S.makeDialog('The code "' + code + '" already exists. Do you want to join the game?', {
+								Yes: function () {
+									M.server.defaultLocation = "^websites/games/" + site + "/game codes/" + encodedCode;
+									M.session.store("/games/" + site + "/game code", code);
+									S.makeDialog("Success!");
+									resolve("joined");
+								}, No: resolve
+							});
+						} else {
+							S.makeDialog('The code "' + code + '" does not exist. Do you want to start a game with that code?', {
+								Yes: function () {
+									M.server.defaultLocation = "^websites/games/" + site + "/game codes/" + encodedCode;
+									M.session.store("/games/" + site + "/game code", code);
+									S.makeDialog("Success!");
+									resolve("created");
+								}, No: resolve
+							});
+						}
 					}
 				}).catch(function () {
 					S.makeDialog("It wasn't possible to access the server's game codes.");

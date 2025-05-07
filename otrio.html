@@ -512,6 +512,20 @@
 					}
 				});
 			});
+			S.listen("shareCodeButton", "click", function () {
+				if (hasGameCode("otrio")) {
+					let link = window.location.href.split("?")[0] + "?gc=" + S.http_build_query(M.session.recall("/games/otrio/game code"));
+					navigator.clipboard.writeText(link).then(function () {
+						S.makeDialog("Copied!");
+					}).catch(function (error) {
+						S.makeDialog("There was a problem copying the link.");
+						console.error(error);
+					});
+				} else {
+					navigator.clipboard.writeText(window.location.href.split("?")[0])
+					// S.makeDialog("You need to set a game code first.");
+				}
+			});
 
 			function sendMessage() {
 				if (S.getId("messageDraft").value.trim()) {  // if there's a message to send
@@ -561,6 +575,23 @@
 
 				S.getId("msgSample").style.background = "hsla(" + messageBackground + ", 100%, 50%, 50%)";
 				S.getId("msgSample").style.borderColor = "hsla(" + messageBorder + ", 100%, 50%, 50%)";
+
+				if (window.location.href.includes("?")) {  // if there's data in the URL
+					let data = S.parse_str(window.location.href);
+					if (data.hasOwnProperty("gc")) {  // if the game code is in the URL
+						S.getId("gameCodeInput").value = data.gc;
+						setGameCode("otrio", data.gc, { fromURL: true }).then(function (status) {
+							if (status == "joined") {  // if joining an existing game
+								resetBoard();
+								alignWithServer();
+								monitorStatus();
+								S.getId("play").textContent = "Restart";
+							} else {  // if the game code couldn't be found
+								S.getId("gameCodeInput").value = "";
+							}
+						});
+					}
+				}
 			});
 		</script>
 		<link rel="stylesheet" href="https://epicenterprograms.github.io/standards/formatting/foundation.css">
@@ -652,6 +683,10 @@
 				<input type="text" id="gameCodeInput" placeholder="Game code">
 				<button id="setCodeButton">
 					Submit game code
+				</button>
+				<br>
+				<button id="shareCodeButton">
+					Copy link to game
 				</button>
 			</section>
 			<button id="play">
