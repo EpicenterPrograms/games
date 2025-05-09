@@ -237,6 +237,7 @@
 					// finds all of the possible positions remaining
 					var optionsAvailable = [];
 					var optionWeights = [];
+					var smartChoicePref = S.getId("dumberOpponent").checked ? 40 : 1000;  // how much the smart choice should be preferred
 					S.forEach(gameState, function (yList, xIndex) {
 						S.forEach(yList, function (zList, yIndex) {
 							S.forEach(zList, function (occupant, zIndex) {
@@ -245,16 +246,16 @@
 									// prefers middle pieces in the middle
 									let isCorner = (xIndex == 0 || xIndex == size.x - 1) && (yIndex == 0 || yIndex == size.y - 1);
 									if (isCorner) {
-										if (zIndex == 0 || zIndex == size.z - 1) {
-											optionWeights.push(2);
+										if (zIndex == 0 || zIndex == size.z - 1) {  // if it's for a biggest or smallest piece
+											optionWeights.push(3);
 										} else {
 											optionWeights.push(1);
 										}
 									} else {
-										if (zIndex == 0 || zIndex == size.z - 1) {
+										if (zIndex == 0 || zIndex == size.z - 1) {  // if it's for a biggest or smallest piece
 											optionWeights.push(1);
 										} else {
-											optionWeights.push(2);
+											optionWeights.push(3);
 										}
 									}
 								}
@@ -278,41 +279,76 @@
 					// strategizes if a win isn't possible
 					if (!canWin) {
 						// sees if someone else is about to win
-						let blockNeeded = false;
+						//// needs to learn how to take into account whether a player is out of pieces to block with
 						let nextPlayer = playerNumber;
+						let dangers = [];  // the potential winning moves of other players
+						let extraWorries = [];  // later potential winning moves (allows preferring double blocks)
+						let totalWins = 0;  // the total possible wins for all players combined
+						let sneakyWins = [];  // the ways a player can win even if blocking doesn't seem urgent
 						S.forEach(3, function (_, nextIndex) {
 							nextPlayer++;
 							nextPlayer %= 4;
-							let wins = 0;
+							let wins = 0;  // the number of ways a given player can win
+							let winOptions = [];
 							S.forEach(optionsAvailable, function (o, index) {
 								let potentialState = JSON.parse(JSON.stringify(gameState));
 								if (standbys[nextPlayer][o.z].length > 0) {  // if the next player can place a piece there
 									potentialState[o.x][o.y][o.z] = nextPlayer;
 									if (playerHasWon(nextPlayer, potentialState)) {
 										wins++;
+										totalWins++;
+										winOptions.push(index);
 										if (standbys[playerNumber][o.z].length > 0) {  // if the original player can place a piece there
-											if (wins > nextIndex) {
-												if (S.getId("dumberOpponent").checked) {
-													optionWeights[index] = 30;
-												} else {
-													optionWeights[index] = 1000;
-												}
-												blockNeeded = true;
-											} else {
-												optionWeights[index] = 3;
-											}
+											optionWeights[index] = 4;
 										}
 									}
 								}
 							});
+							if (wins > nextIndex) {  // if the ways of winning outnumber the number of people left to block
+								if (dangers.length == 0) {  // if there isn't already a player going to win sooner
+									dangers = winOptions;
+								} else {
+									extraWorries = [...extraWorries, ...winOptions];
+								}
+							} else if (wins > 0) {  // if the player might be able to sneak in a win
+								sneakyWins = winOptions;
+							}
 						});
-						// plans ahead if it has the freedom to do so
-						if (!blockNeeded) {
+						if (totalWins > 2) {  // if a player will be able to sneak in a win
+							extraWorries = [...extraWorries, ...sneakyWins];
+						}
+						if (totalWins > 3) {  // if someone else is going to win no matter what
+							console.log("All is lost! (Probably)");
+						}
+						if (dangers.length > 0) {  // if someone else is about to win
+							//// dangers = dangers.sort(() => Math.random() - 0.5);  // randomizes which danger to address first
+							S.forEach(dangers, function (d) {
+								if (standbys[playerNumber][optionsAvailable[d].z].length > 0) {  // if the player can place a piece there
+									if (extraWorries.includes(d)) {  // if the player can block multiple wins at once
+										optionWeights[d] = smartChoicePref * 10;
+									} else {
+										optionWeights[d] = smartChoicePref;
+									}
+								}
+							});
+						} else if (totalWins > 2) {  // if there are too many ways to win for all future players to block
+							//// there should be double blocking here as well
+							S.forEach(sneakyWins, function (d) {
+								if (standbys[playerNumber][optionsAvailable[d].z].length > 0) {  // if the player can place a piece there
+									optionWeights[d] = smartChoicePref;
+								}
+							});
+						} else {
+							// plans ahead if it has the freedom to do so
 							//// strategy here
 						}
 					}
 					// makes a final decision on a move
 					let chosenMove = weightedRandomChoice(optionsAvailable, optionWeights);
+					console.log(colors[playerNumber]);
+					console.log(optionWeights);
+					console.log(chosenMove);
+					console.log(optionWeights[optionsAvailable.indexOf(chosenMove)]);
 					moveAPiece(playerNumber, chosenMove.x, chosenMove.y, chosenMove.z);
 					// sends the updated game state to the server if necessary
 					if (hasGameCode("otrio")) {
@@ -702,7 +738,10 @@
 		</h1>
 		<main>
 			<section>
-				This game is basically 3-dimensional Tic-Tac-Toe. To win, get 3 pieces in one spot, 3 of the same size in a row, or 3 of increasing size in a row. Letting the AI take a turn will cause the program to automatically make a reasonably strategic move. When the AI isn't less likely to block wins, it should be next to impossible to sneak in a win, but the moment I stop paying attention and start pressing the button too much, people start winning somehow, so maybe you can get away with it.
+				This game is basically 3-dimensional Tic-Tac-Toe. To win, get 3 pieces in one spot, 3 of the same size in a row, or 3 of increasing size in a row.
+			</section>
+			<section>
+				Letting the AI take a turn will cause the program to automatically make a reasonably strategic move. When the AI isn't less likely to block wins, it's rather difficult to sneak in a win, but sometimes strategy (or luck) can win out. Also, the AI currently isn't able to take into account whether a following player won't have the proper piece to block a player from winning, so maybe you can use that to your advantage.
 			</section>
 			<section>
 				Setting a game code allows you to play with others online who use the same save code, and it allows you to message them as well. Pieces aren't assigned to specific players, so any piece can be moved by anyone. Make sure the people you play with aren't troublemakers. Game codes are automatically cleared after 48 hours of inactivity.
