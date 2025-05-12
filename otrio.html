@@ -578,6 +578,15 @@
 					// S.makeDialog("You need to set a game code first.");
 				}
 			});
+			S.listen("realignWithServer", "click", function () {  // puts everyone on the same page if something weird happened
+				if (hasGameCode("otrio")) {
+					clearInterval(serverChecker);
+					resetBoard();
+					alignWithServer();
+					monitorStatus();
+					S.getId("play").textContent = "Restart";
+				}
+			});
 
 			function sendMessage() {
 				if (S.getId("messageDraft").value.trim()) {  // if there's a message to send
@@ -763,6 +772,9 @@
 				<br>
 				<button id="shareCodeButton">
 					Copy link to game
+				</button>
+				<button id="realignWithServer">
+					Realign with server
 				</button>
 			</section>
 			<button id="play">
