@@ -50,6 +50,7 @@
 			var piecesPerLayer = 3;  // the number of pieces allowed per layer
 			var messages = [];  // messages shared by online players
 			var serverChecker;  // an interval reference which checks for changes on the server
+			var lastSentData = 0;  // the timestamp of the last time data was sent to the server
 			var messageBackground = Math.round(Math.random() * 360);  // a random HSL hue to identify messages from this user
 			var messageBorder = Math.round(Math.random() * 360);  // a random HSL hue to identify messages from this user
 			var blabbermouth;  // the thing that could speak new incoming messages out loud
@@ -433,6 +434,11 @@
 								currentPiece = this;
 								currentLayer = layerIndex;
 								currentPlayer = playerIndex;
+								showWhoseTurn(false);
+								// sends the updated currentPlayer to the server if necessary
+								if (hasGameCode("otrio")) {
+									sendData();
+								}
 							});
 							piece.addEventListener("focus", function () {
 								piece.style.borderColor = "yellow";
@@ -474,6 +480,7 @@
 					S.makeDialog("There was a problem sending your data.");
 					console.error(error);
 				});
+				lastSentData = data.lastUpdated;
 			}
 
 			function updateGame(newState) {
@@ -491,7 +498,7 @@
 							});
 						});
 					});
-					if (usedSpots == 0) {
+					if (usedSpots == 0) {  // if the game has been reset
 						resetBoard();
 					}
 				}
@@ -521,10 +528,12 @@
 
 			function alignWithServer() {
 				M.server.recall("./").then(function (data) {
-					updateGame(JSON.parse(data.gameState));
-					currentPlayer = data.currentPlayer;
-					showWhoseTurn(false);
-					updateMessages(data.messages);
+					if (data.lastUpdated > lastSentData) {  // if the server data is newer than the local data
+						updateGame(JSON.parse(data.gameState));
+						currentPlayer = data.currentPlayer;
+						showWhoseTurn(false);
+						updateMessages(data.messages);
+					}
 				}).catch(function (error) {
 					console.error("There was an error syncing the game state.");
 					console.error(error);
@@ -741,10 +750,10 @@
 				This game is basically 3-dimensional Tic-Tac-Toe. To win, get 3 pieces in one spot, 3 of the same size in a row, or 3 of increasing size in a row.
 			</section>
 			<section>
-				Letting the AI take a turn will cause the program to automatically make a reasonably strategic move. When the AI isn't less likely to block wins, it's rather difficult to sneak in a win, but sometimes strategy (or luck) can win out. Also, the AI currently isn't able to take into account whether a following player won't have the proper piece to block a player from winning, so maybe you can use that to your advantage.
+				Letting the AI take a turn will cause the program to automatically make a reasonably strategic move. When the AI isn't less likely to block wins, it's rather difficult to sneak in a win, but sometimes strategy (or luck) can win out. Also, the AI will always block the person who's going to win the soonest, and it currently isn't able to take into account whether a following player won't have the proper piece to block a player from winning, so maybe you can use that to your advantage.
 			</section>
 			<section>
-				Setting a game code allows you to play with others online who use the same save code, and it allows you to message them as well. Pieces aren't assigned to specific players, so any piece can be moved by anyone. Make sure the people you play with aren't troublemakers. Game codes are automatically cleared after 48 hours of inactivity.
+				Setting a game code allows you to play with others online who use the same save code, and it allows you to message them as well. Pieces aren't assigned to specific players, so any piece can be moved by anyone. Also, although it shouldn't be a problem if you play the game right, there's likely to be an issue if two people playing the same game try to make a move at nearly the same time. Make sure the people you play with aren't troublemakers. Game codes are automatically cleared after 48 hours of inactivity.
 			</section>
 			<section style="text-align:center">
 				<input type="text" id="gameCodeInput" placeholder="Game code">
