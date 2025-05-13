@@ -526,9 +526,9 @@
 				messages = providedMsgs;
 			}
 
-			function alignWithServer() {
+			function alignWithServer(override) {
 				M.server.recall("./").then(function (data) {
-					if (data.lastUpdated > lastSentData) {  // if the server data is newer than the local data
+					if (data.lastUpdated > lastSentData && !override) {  // if the server data is newer than the local data
 						updateGame(JSON.parse(data.gameState));
 						currentPlayer = data.currentPlayer;
 						showWhoseTurn(false);
@@ -582,7 +582,7 @@
 				if (hasGameCode("otrio")) {
 					clearInterval(serverChecker);
 					resetBoard();
-					alignWithServer();
+					alignWithServer(true);  // align even if this device last updated the game
 					monitorStatus();
 					S.getId("play").textContent = "Restart";
 				}
