@@ -528,7 +528,7 @@
 
 			function alignWithServer(override) {
 				M.server.recall("./").then(function (data) {
-					if (data.lastUpdated > lastSentData && !override) {  // if the server data is newer than the local data
+					if (data.lastUpdated > lastSentData || override) {  // if the server data is newer than the local data
 						updateGame(JSON.parse(data.gameState));
 						currentPlayer = data.currentPlayer;
 						showWhoseTurn(false);
