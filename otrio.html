@@ -73,6 +73,12 @@
 					return placeIsOpen;
 				}
 			}
+			function pieceRemains(playerNumber, pieceSize) {
+				/**
+				checks whether a player has any pieces left of a given size
+				*/
+				return standbys[playerNumber][pieceSize].length > 0;
+			}
 
 			function showWhoseTurn(increment = true) {
 				if (increment) {
@@ -198,7 +204,7 @@
 				if (gameHasEnded()) {
 					S.getId("currentPlayer").style.left = "100%";
 					S.getId("gameScreen").style.pointerEvents = "none";
-					S.getId("employAI").disabled = "disabled";
+					S.getId("employBot").disabled = "disabled";
 				} else {
 					showWhoseTurn();
 				}
@@ -220,7 +226,7 @@
 				if (gameHasEnded()) {
 					S.getId("currentPlayer").style.left = "100%";
 					S.getId("gameScreen").style.pointerEvents = "none";
-					S.getId("employAI").disabled = "disabled";
+					S.getId("employBot").disabled = "disabled";
 				} else {
 					showWhoseTurn();
 				}
@@ -267,7 +273,7 @@
 					let canWin = false;
 					S.forEach(optionsAvailable, function (o, index) {
 						let potentialState = JSON.parse(JSON.stringify(gameState));
-						if (standbys[playerNumber][o.z].length > 0) {  // if the player can place a piece there
+						if (pieceRemains(playerNumber, o.z)) {  // if the player can place a piece there
 							potentialState[o.x][o.y][o.z] = playerNumber;
 							if (playerHasWon(playerNumber, potentialState)) {
 								optionWeights[index] = 1000;
@@ -282,6 +288,7 @@
 						// sees if someone else is about to win
 						//// needs to learn how to take into account whether a player is out of pieces to block with
 						let nextPlayer = playerNumber;
+						let winningMoves = [];  // the places where anyone can win in the current round ({player: number, option: index})
 						let dangers = [];  // the potential winning moves of other players
 						let extraWorries = [];  // later potential winning moves (allows preferring double blocks)
 						let totalWins = 0;  // the total possible wins for all players combined
@@ -293,13 +300,14 @@
 							let winOptions = [];
 							S.forEach(optionsAvailable, function (o, index) {
 								let potentialState = JSON.parse(JSON.stringify(gameState));
-								if (standbys[nextPlayer][o.z].length > 0) {  // if the next player can place a piece there
+								if (pieceRemains(nextPlayer, o.z)) {  // if the next player can place a piece there
 									potentialState[o.x][o.y][o.z] = nextPlayer;
 									if (playerHasWon(nextPlayer, potentialState)) {
+										winningMoves.push({ player: nextPlayer, option: index });
 										wins++;
 										totalWins++;
 										winOptions.push(index);
-										if (standbys[playerNumber][o.z].length > 0) {  // if the original player can place a piece there
+										if (pieceRemains(playerNumber, o.z)) {  // if the original player can place a piece there
 											optionWeights[index] = 4;
 										}
 									}
@@ -324,7 +332,7 @@
 						if (dangers.length > 0) {  // if someone else is about to win
 							//// dangers = dangers.sort(() => Math.random() - 0.5);  // randomizes which danger to address first
 							S.forEach(dangers, function (d) {
-								if (standbys[playerNumber][optionsAvailable[d].z].length > 0) {  // if the player can place a piece there
+								if (pieceRemains(playerNumber, optionsAvailable[d].z)) {  // if the player can place a piece there
 									if (extraWorries.includes(d)) {  // if the player can block multiple wins at once
 										optionWeights[d] = smartChoicePref * 10;
 									} else {
@@ -332,6 +340,7 @@
 									}
 								}
 							});
+							/// this should be made to prefer blocking where other players can't move
 						} else if (totalWins > 2) {  // if there are too many ways to win for all future players to block
 							//// there should be double blocking here as well
 							S.forEach(sneakyWins, function (d) {
@@ -456,7 +465,7 @@
 				S.getId("gameScreen").appendChild(playerHighlight);
 
 				S.getId("gameScreen").style.pointerEvents = "auto";
-				S.getId("employAI").disabled = false;
+				S.getId("employBot").disabled = false;
 			}
 
 			S.listen("play", "click", function () {
@@ -644,7 +653,7 @@
 
 
 
-			S.listen("employAI", "click", function () {
+			S.listen("employBot", "click", function () {
 				new Opponent(currentPlayer).takeATurn();
 			});
 
@@ -759,7 +768,7 @@
 				This game is basically 3-dimensional Tic-Tac-Toe. To win, get 3 pieces in one spot, 3 of the same size in a row, or 3 of increasing size in a row.
 			</section>
 			<section>
-				Letting the AI take a turn will cause the program to automatically make a reasonably strategic move. When the AI isn't less likely to block wins, it's rather difficult to sneak in a win, but sometimes strategy (or luck) can win out. Also, the AI will always block the person who's going to win the soonest, and it currently isn't able to take into account whether a following player won't have the proper piece to block a player from winning, so maybe you can use that to your advantage.
+				Letting the bot take a turn will cause the program to automatically make a reasonably strategic move. When the bot isn't less likely to block wins, it's rather difficult to sneak in a win, but sometimes strategy (or luck) can win out. Also, the bot will always block the person who's going to win the soonest, and it currently isn't able to take into account whether a following player won't have the proper piece to block a player from winning, so maybe you can use that to your advantage.
 			</section>
 			<section>
 				Setting a game code allows you to play with others online who use the same save code, and it allows you to message them as well. Pieces aren't assigned to specific players, so any piece can be moved by anyone. Also, although it shouldn't be a problem if you play the game right, there's likely to be an issue if two people playing the same game try to make a move at nearly the same time. Make sure the people you play with aren't troublemakers. Game codes are automatically cleared after 48 hours of inactivity.
@@ -780,8 +789,8 @@
 			<button id="play">
 				Play
 			</button>
-			<button id="employAI" disabled>
-				Let AI take<br>a turn
+			<button id="employBot" disabled>
+				Let the bot<br>take a turn
 			</button>
 			<br>
 			<div class="generic-background" id="gameScreen"></div>
@@ -836,7 +845,7 @@
 			<br>
 			<br>
 			<h2>
-				AI settings
+				Bot settings
 			</h2>
 			<input type="checkbox" id="dumberOpponent"> <label for="dumberOpponent">Make less likely to block wins</label>
 		</main>
