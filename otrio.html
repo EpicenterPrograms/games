@@ -349,8 +349,23 @@
 								}
 							});
 						} else {
-							// plans ahead if it has the freedom to do so
-							//// strategy here
+							let preoccupied = false;  // if the opponent has other priorities
+							if (winningMoves.length > 0) {  // if someone can win at some point
+								forEach(winningMoves, function (move) {
+									if (optionsWeights[move.index] <= 20) {  // if the opponent isn't already trying to move there
+										if (move.player == (playerNumber + 2) % 4) {
+											////
+										} else if (move.player == (playerNumber + 3) % 4) {
+											////
+										}
+										//// block possible wins that other players don't have the pieces to block
+									}
+								});
+							}
+							if (!preoccupied) {
+								// plans ahead if it has the freedom to do so
+								//// strategy here
+							}
 						}
 					}
 					// makes a final decision on a move
@@ -712,6 +727,13 @@
 				width: var(--game-space-width);
 				height: var(--game-space-width);
 				cursor: pointer;
+			}
+			.playing-space::before {  /* adds snowflakes in the game spaces */
+				content: "\2744\fe0f";
+				position: absolute;
+				left: -.2rem;
+				top: -.25rem;
+				font-size: calc(var(--game-space-width) / 1.5);
 			}
 			.game-piece {
 				position: absolute;
