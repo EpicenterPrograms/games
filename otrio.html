@@ -351,8 +351,8 @@
 						} else {
 							let preoccupied = false;  // if the opponent has other priorities
 							if (winningMoves.length > 0) {  // if someone can win at some point
-								forEach(winningMoves, function (move) {
-									if (optionsWeights[move.index] <= 20) {  // if the opponent isn't already trying to move there
+								S.forEach(winningMoves, function (move) {
+									if (optionWeights[move.index] <= 20) {  // if the opponent isn't already trying to move there
 										if (move.player == (playerNumber + 2) % 4) {
 											////
 										} else if (move.player == (playerNumber + 3) % 4) {
@@ -731,8 +731,8 @@
 			.playing-space::before {  /* adds snowflakes in the game spaces */
 				content: "\2744\fe0f";
 				position: absolute;
-				left: -.2rem;
-				top: -.25rem;
+				left: 0rem;
+				top: 0rem;
 				font-size: calc(var(--game-space-width) / 1.5);
 			}
 			.game-piece {
